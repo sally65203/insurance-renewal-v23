@@ -7,10 +7,12 @@ let token='',expiry=0,running=null,dirty=false,paused=false;
 const status=s=>{const e=document.getElementById('googleSyncStatus');if(e)e.textContent=s};
 const calendar=()=>localStorage.getItem('insurance-v23-calendar-id')||'primary';
 async function read(){
+ if(typeof ensureDatabase==='function')await ensureDatabase();
  if(typeof db==='undefined'||!db)throw Error('本機資料庫尚未就緒');
  return new Promise((resolve,reject)=>{const q=db.transaction('settings','readonly').objectStore('settings').get(STORE);q.onsuccess=()=>{if(q.result)return resolve(q.result.value);try{resolve(JSON.parse(localStorage.getItem(STORE)||'{}'))}catch{reject(Error('本機行事曆對應資料損壞，請從 JSON 還原'))}};q.onerror=()=>reject(q.error)});
 }
 async function persist(m){
+ if(typeof ensureDatabase==='function')await ensureDatabase();
  await new Promise((resolve,reject)=>{const tx=db.transaction('settings','readwrite');tx.objectStore('settings').put({id:STORE,value:m});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('事件對應儲存失敗'))});
  localStorage.removeItem(STORE);
 }
@@ -41,7 +43,7 @@ async function api(path,method='GET',body){
 const endpoint=c=>'/calendars/'+encodeURIComponent(c)+'/events';
 async function list(c){let result=[],page='';do{const r=await api(endpoint(c)+'?maxResults=2500&privateExtendedProperty=app%3D'+APP+(page?'&pageToken='+encodeURIComponent(page):''));result.push(...(r.items||[]));page=r.nextPageToken||''}while(page);return result}
 async function get(c,id){try{return await api(endpoint(c)+'/'+encodeURIComponent(id))}catch(e){if([404,410].includes(e.code))return null;throw e}}
-function policies(){return new Promise((ok,fail)=>{const q=db.transaction('policies','readonly').objectStore('policies').getAll();q.onsuccess=()=>ok(q.result);q.onerror=()=>fail(q.error)})}
+async function policies(){if(typeof ensureDatabase==='function')await ensureDatabase();return new Promise((ok,fail)=>{const q=db.transaction('policies','readonly').objectStore('policies').getAll();q.onsuccess=()=>ok(q.result);q.onerror=()=>fail(q.error)})}
 async function pass(){
  const all=await policies(),c=calendar(),map=await read(),remote=await list(c),active=new Map();let changed=0,failed=0,errors=[];
  const fail=e=>{failed++;if(!errors.includes(e.message))errors.push(e.message)};
