@@ -1,7 +1,7 @@
 {
   "name": "產險續保 V2.3 測試版",
   "short_name": "續保V2.3測試",
-  "description": "V2.3 RC1 獨立測試；資料不會自動從 V2.2 帶入",
+  "description": "V2.3 RC2 獨立測試；資料不會自動從 V2.2 帶入",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
