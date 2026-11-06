@@ -34,3 +34,15 @@ test('restore merges maps and removes reminders absent from restored records',as
 test('unknown other-device events are not deleted',async()=>{const h=harness();h.state.rows=[policy()];await h.connect();h.state.map={};h.state.rows=[];await h.g.sync();assert.equal(h.alive().length,1)});
 test('cancel without renewal and deleted mappings missing at Google',async()=>{const h=harness();h.state.rows=[policy()];await h.connect();h.state.rows[0].status='不續保';await h.g.sync();assert.equal(h.alive().length,0);await h.g.importMap({gone:{eventId:'abcdef',calendarId:'test-calendar'}});await h.g.sync();assert.equal(Object.keys(await h.g.exportMap()).length,0)});
 test('server duplicate app events collapse to one',async()=>{const h=harness();h.state.rows=[policy()];await h.connect();const event=h.alive()[0];h.state.events.set('abcde',{...event,id:'abcde'});await h.g.sync();assert.equal(h.alive().length,1)});
+
+test('titles identify plate and type; existing generic events update in place without disclosing other fields',async()=>{
+ const h=harness();h.state.rows=[{...policy(),plate:'ABC-1234',customer:'Private name',premium:'12345',note:'Private note'}];
+ await h.connect();const id=h.alive()[0].id;assert.equal(h.alive()[0].summary,'續保提醒｜ABC-1234｜強制險');
+ h.state.events.get(id).summary='產險續保提醒';h.state.calls=[];
+ await h.g.sync();assert.equal(h.alive().length,1);assert.equal(h.alive()[0].id,id);assert.equal(h.alive()[0].summary,'續保提醒｜ABC-1234｜強制險');
+ assert.equal(h.state.calls.filter(x=>x.method==='POST').length,0);
+ const publicText=h.alive()[0].summary+h.alive()[0].description;
+ for(const value of ['Private name','Private note','12345','TEST001'])assert(!publicText.includes(value));
+ h.state.rows[0].plate='XYZ-9876';await h.g.sync();assert.equal(h.alive()[0].id,id);assert.equal(h.alive()[0].summary,'續保提醒｜XYZ-9876｜強制險');
+ h.state.rows[0].plate=' ';h.state.rows[0].type='';await h.g.sync();assert.equal(h.alive().length,1);assert.equal(h.alive()[0].summary,'續保提醒｜未填車牌｜未填險種');
+});

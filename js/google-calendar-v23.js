@@ -30,7 +30,7 @@ async function keyFor(r){
 function eventFor(r,key){
  const day=oneMonthBefore(r.end),start=day.slice(0,4)+'-'+day.slice(4,6)+'-'+day.slice(6);
  const end=new Date(Date.UTC(+day.slice(0,4),+day.slice(4,6)-1,+day.slice(6)+1)).toISOString().slice(0,10);
- return {summary:'產險續保提醒',description:'請開啟續保系統確認到期保單。',start:{date:start,timeZone:'Asia/Taipei'},end:{date:end,timeZone:'Asia/Taipei'},reminders:{useDefault:false,overrides:[{method:'popup',minutes:0}]},extendedProperties:{private:{app:APP,policyKey:key}}};
+ return {summary:['續保提醒',norm(r.plate)||'未填車牌',norm(r.type)||'未填險種'].join('｜'),description:'請開啟續保系統確認到期保單。',start:{date:start,timeZone:'Asia/Taipei'},end:{date:end,timeZone:'Asia/Taipei'},reminders:{useDefault:false,overrides:[{method:'popup',minutes:0}]},extendedProperties:{private:{app:APP,policyKey:key}}};
 }
 async function api(path,method='GET',body){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
@@ -54,7 +54,7 @@ async function pass(){
  let matches=remote.filter(e=>e.status!=='cancelled'&&e.extendedProperties?.private?.policyKey===key),event=matches[0];
  if(!event&&entry?.eventId&&(!entry.calendarId||entry.calendarId===c)){
  const old=await get(c,entry.eventId);
- if(old&&old.status!=='cancelled'&&(old.extendedProperties?.private?.app===APP||(!entry.key&&old.summary===body.summary&&old.description===body.description)))event=old;
+ if(old&&old.status!=='cancelled'&&(old.extendedProperties?.private?.app===APP||(!entry.key&&(old.summary===body.summary||old.summary==='產險續保提醒')&&old.description===body.description)))event=old;
  }
  if(!event){
   for(let generation=0;generation<20;generation++){
