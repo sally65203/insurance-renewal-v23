@@ -1,4 +1,61 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#173a58"><title>產險續保小系統 V2.3</title><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="續保V2.3"><meta name="apple-mobile-web-app-status-bar-style" content="default"><style>:root{font-family:-apple-system,BlinkMacSystemFont,'Noto Sans TC',sans-serif;color:#203449;background:#f4f7fa}*{box-sizing:border-box}body{margin:0}header{background:#173a58;color:white;padding:20px 18px 18px}header h1{font-size:21px;margin:0 0 5px}header small{color:#c7d9e9}.wrap{max-width:760px;margin:auto;padding:16px 14px 90px}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 15px}.stat{background:white;border-radius:12px;padding:13px 7px;text-align:center;box-shadow:0 1px 5px #dfe5eb}.stat b{display:block;font-size:25px;color:#174e73}.stat span{font-size:12px;color:#627487}.toolbar{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}button,.filelabel{appearance:none;border:0;border-radius:10px;background:#1e5d86;color:white;padding:12px;font-size:14px;font-weight:650;text-align:center;cursor:pointer}button.secondary,.filelabel.secondary{background:#e6eef4;color:#24516d}button.danger{background:#ad3b42}button:disabled{opacity:.5}.panel{background:white;border-radius:14px;padding:16px;margin:13px 0;box-shadow:0 1px 6px #e3e9ef}.panel h2{font-size:16px;margin:0 0 12px}.muted{color:#6c7c8a;font-size:12px;line-height:1.6}input,select{width:100%;border:1px solid #cdd9e2;border-radius:9px;padding:11px;font-size:16px;background:white;color:#203449}label{display:block;font-size:13px;color:#4b6273;margin:9px 0 5px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}.wide{grid-column:1/-1}.item{padding:14px 0;border-bottom:1px solid #e8edf1}.item:last-child{border:0}.itemtop{display:flex;align-items:start;justify-content:space-between;gap:8px}.item strong{font-size:16px}.tag{display:inline-block;border-radius:6px;background:#e7f0f7;color:#245577;font-size:11px;padding:4px 6px;white-space:nowrap}.tag.warn{background:#fff0d7;color:#8d5b16}.tag.done{background:#e5f3e8;color:#256440}.item p{margin:5px 0;font-size:13px;color:#566a7a;line-height:1.5}.actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}.actions button{padding:8px 12px;font-size:12px}.hidden{display:none!important}#message{position:sticky;bottom:12px;background:#173a58;color:white;border-radius:10px;padding:12px;display:none;z-index:3}#message.show{display:block}.hint{background:#fff9e9;border:1px solid #f1dfae;padding:11px;border-radius:9px;font-size:12px;line-height:1.6}.filelabel input{display:none}@media(max-width:360px){.fields{grid-template-columns:1fr}.summary{gap:5px}}</style></head><body><header><h1>產險續保小系統</h1><small>V2.3.1 正式版 · 與 V2.2 資料分開，請固定同一入口使用</small></header><main class="wrap"><div class="summary"><div class="stat"><b id="count">0</b><span>全部保單</span></div><div class="stat"><b id="soon">0</b><span>30天內到期</span></div><div class="stat"><b id="pending">0</b><span>待承保確認</span></div></div><div class="toolbar"><button onclick="showForm()">＋ 新增保單</button><button class="secondary" onclick="document.getElementById('imports').scrollIntoView({behavior:'smooth'})">匯入資料</button></div><section class="panel"><h2>保單查詢與續保追蹤</h2><input id="search" placeholder="搜尋姓名、保單號碼、車牌" oninput="render()"><label>狀態篩選</label><select id="filter" onchange="render()"><option value="">全部狀態</option><option>待續保</option><option>處理中</option><option>已續保</option><option>待承保確認</option><option>已承保</option><option>不續保</option></select><div id="items"></div></section><section class="panel" id="calendarPanel"><h2>行事曆檔案匯出（手動備用）</h2><p class="muted">匯出所有尚未完成續保、且有有效到期日的保單，提醒日期為到期日前一個月。此 .ics 匯出功能須自行匯入行事曆，不會更新或刪除已匯入事件。若已使用下方 Google 行事曆同步，請勿再匯入同一批 .ics，以免重複提醒。</p><button type="button" onclick="exportRenewalCalendar()">匯出行事曆提醒檔 (.ics)</button><p id="calendarExportStatus" class="muted" aria-live="polite"></p></section><section class="panel"><h2>Google 行事曆同步（V2.3）</h2><p class="muted">首次使用需設定 Google OAuth 用戶端 ID 並授權；重新開啟 Safari 後可能需重新授權。未授權不會同步。</p><label>Google OAuth 用戶端 ID（非密碼）</label><input id="googleClientId" placeholder="xxx.apps.googleusercontent.com"><label>專用 Google 行事曆 ID（先在 Google 行事曆建立「產險續保提醒」，再從設定複製 ID）</label><input id="googleCalendarId" placeholder="行事曆 ID"><div class="toolbar"><button onclick="GoogleRenewal.connect()">連接 Google</button><button class="secondary" onclick="GoogleRenewal.sync()">重新同步</button></div><p id="googleSyncStatus" class="muted" aria-live="polite"></p></section><section id="formpanel" class="panel hidden"><h2 id="formtitle">新增保單</h2><form id="policyForm"><div class="fields"><div class="wide"><label>被保險人 *</label><input name="customer" required></div><div><label>保險公司</label><select name="company"><option>新安東京海上</option><option>富邦產險</option><option>臺灣產物</option><option>其他</option></select></div><div><label>保險類別</label><select name="type"><option>任意險</option><option>強制險</option><option>其他產險</option></select></div><div><label>保單號碼</label><input name="number"></div><div><label>車牌號碼</label><input name="plate"></div><div><label>保險起日</label><input name="start" type="date"></div><div><label>保險迄日 *</label><input name="end" type="date" required></div><div><label>總保費（選填）</label><input name="premium" type="number" min="0" step="1"></div><div><label>狀態</label><select name="status"><option>待續保</option><option>處理中</option><option>已續保</option><option>待承保確認</option><option>已承保</option><option>不續保</option></select></div><div class="wide"><label>備註</label><input name="note"></div><div class="wide"><label>原始 PDF（可選，保存在本機）</label><input name="pdf" type="file" accept="application/pdf,.pdf"></div></div><div class="toolbar"><button type="submit">儲存保單</button><button type="button" class="secondary" onclick="hideForm()">取消</button></div></form></section><section class="panel" id="imports"><h2>Excel 續保清冊匯入</h2><p class="muted">支援 .xls / .xlsx / .csv。先預覽欄位，再指定客戶、到期日等欄位；不會直接覆蓋既有資料。Excel 解析需要網路載入元件，CSV 可離線匯入。</p><input id="excel" type="file" accept=".xls,.xlsx,.csv" onchange="loadExcel(event)"><div id="mapping" class="hidden"><p id="fileinfo" class="muted"></p><div class="fields" id="mapfields"></div><p id="preview" class="muted"></p><button onclick="commitExcel()">確認匯入清冊</button></div><hr style="border:0;border-top:1px solid #e5ebef;margin:18px 0"><h2>PDF 新投保／續保</h2><p class="muted">目前已驗證新安東京海上、臺灣產物文字型 PDF，並測試富邦掃描型 PDF 分區 OCR。上傳後嘗試讀取保險公司、被保險人、車牌、保單號碼、起迄日及總保費。請逐欄核對後才儲存。掃描型 PDF 辨識需連線載入 OCR 元件，結果請人工核對。</p><input id="pdfImport" type="file" accept="application/pdf,.pdf" onchange="importPDF(event)"><div id="pdfResult" class="hint hidden" style="margin-top:10px" aria-live="polite"></div><button class="secondary" style="margin-top:10px" onclick="showForm('pdf')">手動新增 PDF 保單紀錄</button></section><section class="panel"><h2>V2.3 安裝及資料安全檢查</h2><p class="muted" id="originInfo">正在檢查開啟環境…</p><div class="hint">請從固定 HTTPS 網址使用 Safari「分享 → 加入主畫面」。安裝後請固定從主畫面圖示進入。主畫面 App 與 Safari 網頁的資料可能彼此獨立，請用 JSON 備份移轉。<b>請先以測試保單確認關閉重開後仍存在，且 JSON 能還原，才輸入正式資料。</b></div></section><section class="panel"><h2>iCloud Drive 手動備份</h2><p class="muted">按「下載備份」後，透過 iPhone 分享／儲存到「檔案」→ iCloud Drive。備份包含保單紀錄及已附加的 PDF；還原會取代目前資料。</p><div class="toolbar"><button onclick="backup()">下載備份 JSON</button><label class="filelabel secondary" style="margin:0">從備份還原<input type="file" accept=".json,application/json" onchange="restore(event)"></label></div><div class="toolbar"><button class="secondary" onclick="backupCSV()">另存 CSV 明細備份</button><button class="secondary" onclick="checkLocalStorage()">檢查本機儲存狀態</button></div><p id="backupStatus" class="muted" aria-live="polite">建議每次新增或修改重要保單後，立即下載 JSON 備份並存到 iCloud Drive。</p><div class="hint" style="margin-bottom:10px">手機使用提醒：HTML 檔直接在 iPhone「檔案」中開啟時，不同開啟方式可能有不同的儲存空間，且資料可能被系統清除。<b>JSON 備份是主要保護措施；CSV 僅供核對，不包含 PDF，也不能用來還原本系統。</b>目前仍需網路載入 PDF、Excel、OCR 元件。</div><div class="hint">重要：本系統資料存於目前瀏覽器的本機儲存空間，清除網站資料可能遺失紀錄。備份尚未加密，含個資，請妥善保管。它不會自動同步至 iCloud，也不保證跨裝置自動共用。</div></section><p class="muted" style="text-align:center">V2.3.1 正式版 · 重要資料異動後請手動備份 JSON 至 iCloud Drive</p><div id="message"></div></main><script>
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#173a58"><title>產險續保小系統 V2.4</title><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="續保V2.3"><meta name="apple-mobile-web-app-status-bar-style" content="default"><style>:root{font-family:-apple-system,BlinkMacSystemFont,'Noto Sans TC',sans-serif;color:#203449;background:#f4f7fa}*{box-sizing:border-box}body{margin:0}header{background:#173a58;color:white;padding:20px 18px 18px}header h1{font-size:21px;margin:0 0 5px}header small{color:#c7d9e9}.wrap{max-width:760px;margin:auto;padding:16px 14px 90px}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 15px}.stat{background:white;border-radius:12px;padding:13px 7px;text-align:center;box-shadow:0 1px 5px #dfe5eb}.stat b{display:block;font-size:25px;color:#174e73}.stat span{font-size:12px;color:#627487}.toolbar{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}button,.filelabel{appearance:none;border:0;border-radius:10px;background:#1e5d86;color:white;padding:12px;font-size:14px;font-weight:650;text-align:center;cursor:pointer}button.secondary,.filelabel.secondary{background:#e6eef4;color:#24516d}button.danger{background:#ad3b42}button:disabled{opacity:.5}.panel{background:white;border-radius:14px;padding:16px;margin:13px 0;box-shadow:0 1px 6px #e3e9ef}.panel h2{font-size:16px;margin:0 0 12px}.muted{color:#6c7c8a;font-size:12px;line-height:1.6}input,select{width:100%;border:1px solid #cdd9e2;border-radius:9px;padding:11px;font-size:16px;background:white;color:#203449}label{display:block;font-size:13px;color:#4b6273;margin:9px 0 5px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}.wide{grid-column:1/-1}.item{padding:14px 0;border-bottom:1px solid #e8edf1}.item:last-child{border:0}.itemtop{display:flex;align-items:start;justify-content:space-between;gap:8px}.item strong{font-size:16px}.tag{display:inline-block;border-radius:6px;background:#e7f0f7;color:#245577;font-size:11px;padding:4px 6px;white-space:nowrap}.tag.warn{background:#fff0d7;color:#8d5b16}.tag.done{background:#e5f3e8;color:#256440}.item p{margin:5px 0;font-size:13px;color:#566a7a;line-height:1.5}.actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}.actions button{padding:8px 12px;font-size:12px}.hidden{display:none!important}#message{position:sticky;bottom:12px;background:#173a58;color:white;border-radius:10px;padding:12px;display:none;z-index:3}#message.show{display:block}.hint{background:#fff9e9;border:1px solid #f1dfae;padding:11px;border-radius:9px;font-size:12px;line-height:1.6}.filelabel input{display:none}@media(max-width:360px){.fields{grid-template-columns:1fr}.summary{gap:5px}}
+.renewal-calendar summary{cursor:pointer;font-weight:700;color:#173a58;min-height:34px;line-height:34px}
+.calendar-nav{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px;margin:12px 0}
+.calendar-nav h2{text-align:center;margin:0;font-variant-numeric:tabular-nums}
+.calendar-nav button{padding:10px;min-height:44px}
+.calendar-week,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.calendar-week{color:#4b6273;text-align:center;font-size:13px;margin-bottom:5px}
+.calendar-day{background:#f1f5f8;color:#203449;min-width:0;min-height:48px;padding:5px 0;display:grid;place-content:center;gap:2px;font-variant-numeric:tabular-nums}
+.calendar-day small{font-size:10px;color:#24516d}
+.calendar-day[aria-current="date"]{box-shadow:inset 0 0 0 2px #1e5d86}
+.calendar-day[aria-pressed="true"]{background:#1e5d86;color:white;box-shadow:inset 0 0 0 2px #173a58}
+.calendar-day[aria-pressed="true"] small{color:white}
+.calendar-entry{display:block;width:100%;text-align:left;overflow-wrap:anywhere;margin:6px 0}
+.calendar-entry small{display:block;margin-top:4px}
+.calendar-footer{border-top:1px solid #e5ebef;margin-top:14px;padding-top:10px}
+button.stat{min-height:70px;border:1px solid #cdd9e2}
+button.stat[aria-pressed="true"]{border-color:#1e5d86;background:#eaf3f9}
+button.stat:focus-visible{outline:2px solid #1e5d86;outline-offset:2px}
+#policyList{scroll-margin-top:12px}
+</style></head><body><header><h1>產險續保小系統</h1><small>V2.4 正式版 · 與 V2.2 資料分開，請固定同一入口使用</small></header><main class="wrap"><div class="summary" aria-label="保單清單快捷鍵">
+ <button type="button" class="stat" data-policy-view="all" aria-pressed="true" aria-controls="policyList" onclick="openPolicyView('all')"><b id="count">0</b><span>全部保單</span></button>
+ <button type="button" class="stat" data-policy-view="soon" aria-pressed="false" aria-controls="policyList" onclick="openPolicyView('soon')"><b id="soon">0</b><span>30天內到期</span></button>
+ <button type="button" class="stat" data-policy-view="pending" aria-pressed="false" aria-controls="policyList" onclick="openPolicyView('pending')"><b id="pending">0</b><span>待承保確認</span></button>
+</div><div class="toolbar"><button onclick="showForm()">＋ 新增保單</button><button class="secondary" onclick="document.getElementById('imports').scrollIntoView({behavior:'smooth'})">匯入資料</button></div>
+<details class="panel renewal-calendar" id="pushSettings">
+ <summary>iPhone 續保推播</summary>
+ <p class="muted">先允許通知並傳送一則測試。收到後，可啟用正式保單提醒，於到期前一個月上午 9:00（台灣時間）發送。</p>
+ <p class="muted">啟用後，Supabase 只接收排程日期、車牌、險種、到期日及本機紀錄識別碼。姓名、保單號碼、保費和 PDF 留在裝置上。</p>
+ <label for="renewalPushKey">正式通知開通碼</label><input type="password" id="renewalPushKey" autocomplete="off" autocapitalize="none" spellcheck="false">
+ <input type="hidden" id="renewalPushPublicKey" value="BD3EAyYyPX7ZbNitgZheydkVO3Gjcxz4XBg9XkKFDlMOwv15rpzNbMX_jUnE0opZ9fG78IncBJTFaa6E4JFmNcA">
+ <div class="toolbar">
+  <button type="button" id="renewalPushEnable" disabled>允許通知</button>
+  <button type="button" id="renewalPushTest" class="secondary" disabled>傳送測試通知</button>
+  <button type="button" id="renewalPushActivate" disabled>啟用正式保單推播</button>
+  <button type="button" id="renewalPushDisable" class="secondary" disabled>停用通知</button>
+ </div>
+ <p id="renewalPushStatus" class="muted" aria-live="polite"></p>
+</details>
+<details class="panel renewal-calendar" id="calendarPanel">
+ <summary>續保行事曆</summary>
+ <p class="muted">依到期前一個月顯示。點選日期可查看當天的續保提醒。</p>
+ <div class="calendar-nav">
+  <button type="button" class="secondary" onclick="moveRenewalMonth(-1)">上個月</button>
+  <h2 id="renewalMonth" aria-live="polite"></h2>
+  <button type="button" class="secondary" onclick="moveRenewalMonth(1)">下個月</button>
+ </div>
+ <div class="calendar-week" aria-hidden="true"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+ <div id="renewalDays" class="calendar-grid" role="group" aria-label="選擇提醒日期"></div>
+ <h3 id="renewalDayHeading" aria-live="polite"></h3>
+ <div id="renewalEntries"></div>
+ <div class="calendar-footer">
+  <button type="button" class="secondary" onclick="resetRenewalMonth()">回到今天</button>
+  <button type="button" class="secondary" onclick="exportRenewalCalendar()">匯出提醒檔 (.ics)</button>
+  <p class="muted">需要鎖定畫面通知時，可手動將提醒檔匯入 iCloud 行事曆。匯出今天起的提醒，提示時間為台灣上午 9 點。改期或取消時，請另外更新已匯入的事件。若已用 Google 同步同一批保單，請避免重複匯入。</p>
+  <p id="calendarExportStatus" class="muted" aria-live="polite"></p>
+ </div>
+</details>
+<section class="panel" id="policyList"><h2 id="policyListTitle" tabindex="-1">保單查詢與續保追蹤</h2><p id="policyViewStatus" class="muted" aria-live="polite"></p><input id="search" placeholder="搜尋姓名、保單號碼、車牌" oninput="render()"><label>狀態篩選</label><select id="filter" onchange="render()"><option value="">全部狀態</option><option>待續保</option><option>處理中</option><option>已續保</option><option>待承保確認</option><option>已承保</option><option>不續保</option></select><div id="items"></div></section><section class="panel"><h2>Google 行事曆同步（V2.3）</h2><p class="muted">首次使用需設定 Google OAuth 用戶端 ID 並授權；重新開啟 Safari 後可能需重新授權。未授權不會同步。</p><label>Google OAuth 用戶端 ID（非密碼）</label><input id="googleClientId" placeholder="xxx.apps.googleusercontent.com"><label>專用 Google 行事曆 ID（先在 Google 行事曆建立「產險續保提醒」，再從設定複製 ID）</label><input id="googleCalendarId" placeholder="行事曆 ID"><div class="toolbar"><button onclick="GoogleRenewal.connect()">連接 Google</button><button class="secondary" onclick="GoogleRenewal.sync()">重新同步</button></div><p id="googleSyncStatus" class="muted" aria-live="polite"></p></section><section id="formpanel" class="panel hidden"><h2 id="formtitle">新增保單</h2><form id="policyForm"><div class="fields"><div class="wide"><label>被保險人 *</label><input name="customer" required></div><div><label>保險公司</label><select name="company"><option>新安東京海上</option><option>富邦產險</option><option>臺灣產物</option><option>其他</option></select></div><div><label>保險類別</label><select name="type"><option>任意險</option><option>強制險</option><option>其他產險</option></select></div><div><label>保單號碼</label><input name="number"></div><div><label>車牌號碼</label><input name="plate"></div><div><label>保險起日</label><input name="start" type="date"></div><div><label>保險迄日 *</label><input name="end" type="date" required></div><div><label>總保費（選填）</label><input name="premium" type="number" min="0" step="1"></div><div><label>狀態</label><select name="status"><option>待續保</option><option>處理中</option><option>已續保</option><option>待承保確認</option><option>已承保</option><option>不續保</option></select></div><div class="wide"><label>備註</label><input name="note"></div><div class="wide"><label>原始 PDF（可選，保存在本機）</label><input name="pdf" type="file" accept="application/pdf,.pdf"></div></div><div class="toolbar"><button type="submit">儲存保單</button><button type="button" class="secondary" onclick="hideForm()">取消</button></div></form></section><section class="panel" id="imports"><h2>Excel 續保清冊匯入</h2><p class="muted">支援 .xls / .xlsx / .csv。先預覽欄位，再指定客戶、到期日等欄位；不會直接覆蓋既有資料。Excel 解析需要網路載入元件，CSV 可離線匯入。</p><input id="excel" type="file" accept=".xls,.xlsx,.csv" onchange="loadExcel(event)"><div id="mapping" class="hidden"><p id="fileinfo" class="muted"></p><div class="fields" id="mapfields"></div><p id="preview" class="muted"></p><button onclick="commitExcel()">確認匯入清冊</button></div><hr style="border:0;border-top:1px solid #e5ebef;margin:18px 0"><h2>PDF 新投保／續保</h2><p class="muted">目前已驗證新安東京海上、臺灣產物文字型 PDF，並測試富邦掃描型 PDF 分區 OCR。上傳後嘗試讀取保險公司、被保險人、車牌、保單號碼、起迄日及總保費。請逐欄核對後才儲存。掃描型 PDF 辨識需連線載入 OCR 元件，結果請人工核對。</p><input id="pdfImport" type="file" accept="application/pdf,.pdf" onchange="importPDF(event)"><div id="pdfResult" class="hint hidden" style="margin-top:10px" aria-live="polite"></div><button class="secondary" style="margin-top:10px" onclick="showForm('pdf')">手動新增 PDF 保單紀錄</button></section><section class="panel"><h2>V2.3 安裝及資料安全檢查</h2><p class="muted" id="originInfo">正在檢查開啟環境…</p><div class="hint">請從固定 HTTPS 網址使用 Safari「分享 → 加入主畫面」。安裝後請固定從主畫面圖示進入。主畫面 App 與 Safari 網頁的資料可能彼此獨立，請用 JSON 備份移轉。<b>請先以測試保單確認關閉重開後仍存在，且 JSON 能還原，才輸入正式資料。</b></div></section><section class="panel"><h2>iCloud Drive 手動備份</h2><p class="muted">按「下載備份」後，透過 iPhone 分享／儲存到「檔案」→ iCloud Drive。備份包含保單紀錄及已附加的 PDF；還原會取代目前資料。</p><div class="toolbar"><button onclick="backup()">下載備份 JSON</button><label class="filelabel secondary" style="margin:0">從備份還原<input type="file" accept=".json,application/json" onchange="restore(event)"></label></div><div class="toolbar"><button class="secondary" onclick="backupCSV()">另存 CSV 明細備份</button><button class="secondary" onclick="checkLocalStorage()">檢查本機儲存狀態</button></div><p id="backupStatus" class="muted" aria-live="polite">建議每次新增或修改重要保單後，立即下載 JSON 備份並存到 iCloud Drive。</p><div class="hint" style="margin-bottom:10px">手機使用提醒：HTML 檔直接在 iPhone「檔案」中開啟時，不同開啟方式可能有不同的儲存空間，且資料可能被系統清除。<b>JSON 備份是主要保護措施；CSV 僅供核對，不包含 PDF，也不能用來還原本系統。</b>目前仍需網路載入 PDF、Excel、OCR 元件。</div><div class="hint">重要：本系統資料存於目前瀏覽器的本機儲存空間，清除網站資料可能遺失紀錄。備份尚未加密，含個資，請妥善保管。它不會自動同步至 iCloud，也不保證跨裝置自動共用。</div></section><p class="muted" style="text-align:center">V2.4 正式版 · 重要資料異動後請手動備份 JSON 至 iCloud Drive</p><div id="message"></div></main><script>
 const DB='insurance_mobile_v23';let db,records=[],editing=null,excelRows=[],headers=[];const $=id=>document.getElementById(id);function msg(t){$('message').textContent=t;$('message').classList.add('show');setTimeout(()=>$('message').classList.remove('show'),4200)}function uid(){return crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()}let databaseOpening=null;
 async function ensureDatabase(){
  if(db){try{db.transaction('policies','readonly');return db}catch(e){if(e.name!=='InvalidStateError')throw e;try{db.close()}catch{}db=null}}
@@ -12,7 +69,30 @@ async function ensureDatabase(){
  }).finally(()=>{databaseOpening=null});return databaseOpening;
 }
 async function init(){try{await ensureDatabase();refresh()}catch(e){msg('無法開啟本機資料庫：'+e.message)}}
-function transaction(mode){return db.transaction('policies',mode).objectStore('policies')}async function refresh(){try{await ensureDatabase()}catch(e){msg('讀取失敗：'+e.message);return}transaction('readonly').getAll().onsuccess=e=>{records=e.target.result;render();if(window.GoogleRenewal)GoogleRenewal.sync()}}async function save(r){await ensureDatabase();return new Promise((resolve,reject)=>{let tx=db.transaction('policies','readwrite');tx.objectStore('policies').put(r);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('transaction aborted'))})}async function del(id){await ensureDatabase();return new Promise((resolve,reject)=>{let tx=db.transaction('policies','readwrite');tx.objectStore('policies').delete(id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('transaction aborted'))})}function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function render(){let today=new Date();today.setHours(0,0,0,0);$('count').textContent=records.length;$('pending').textContent=records.filter(x=>x.status==='待承保確認').length;$('soon').textContent=records.filter(x=>{let d=new Date(x.end+'T00:00:00'),n=(d-today)/86400000;return n>=0&&n<=30&&x.status!=='已續保'&&x.status!=='不續保'}).length;let s=$('search').value.trim().toLowerCase(),f=$('filter').value;let arr=records.filter(x=>(!f||x.status===f)&&(!s||[x.customer,x.number,x.plate].some(y=>String(y||'').toLowerCase().includes(s)))).sort((a,b)=>(a.end||'9999').localeCompare(b.end||'9999'));$('items').innerHTML=arr.length?arr.map(x=>{let days=Math.ceil((new Date(x.end+'T00:00:00')-today)/86400000);let t=x.status==='待承保確認'?'warn':x.status==='已續保'||x.status==='已承保'?'done':'';return `<div class="item"><div class="itemtop"><strong>${esc(x.customer)}</strong><span class="tag ${t}">${esc(x.status)}</span></div><p>${esc(x.company)} · ${esc(x.type)} ${x.plate?'· '+esc(x.plate):''}</p><p>保單：${esc(x.number||'尚未取得')}<br>到期：${esc(x.end||'未填')} ${Number.isFinite(days)?'（'+(days<0?'逾期 '+(-days):'剩餘 '+days)+' 天）':''}</p><div class="actions"><button class="secondary" onclick="edit('${x.id}')">查看／修改</button>${x.pdfData?`<button class="secondary" onclick="viewPDF('${x.id}')">開啟 PDF</button>`:''}<button class="secondary" onclick="removePolicy('${x.id}')">刪除</button></div></div>`}).join(''):'<p class="muted">目前沒有符合條件的保單。</p>'}function showForm(kind){if(kind!=='pdf')pendingPDF=null;editing=null;$('policyForm').reset();$('formtitle').textContent='新增保單';if(kind==='pdf')$('policyForm').elements.status.value='待承保確認';$('formpanel').classList.remove('hidden');$('formpanel').scrollIntoView({behavior:'smooth'})}function hideForm(){pendingPDF=null;$('formpanel').classList.add('hidden');editing=null}function edit(id){let r=records.find(x=>x.id===id);if(!r)return;showForm();editing=id;$('formtitle').textContent='修改保單';for(let k of ['customer','company','type','number','plate','start','end','premium','status','note']){const field=$('policyForm').elements[k];if(field.tagName==='SELECT'&&r[k]&&!Array.from(field.options).some(o=>o.value===r[k])){const option=document.createElement('option');option.value=r[k];option.textContent=r[k];field.add(option);}field.value=r[k]||'';}$('formpanel').scrollIntoView({behavior:'smooth'})}function readBase64(file){return new Promise((res,rej)=>{let f=new FileReader();f.onload=()=>res(f.result);f.onerror=rej;f.readAsDataURL(file)})}$('policyForm').onsubmit=async e=>{e.preventDefault();let f=e.target,old=records.find(x=>x.id===editing),r={id:editing||uid(),created:old?.created||new Date().toISOString()};for(let k of ['customer','company','type','number','plate','start','end','premium','status','note'])r[k]=f.elements[k].value.trim();r.pdfData=old?.pdfData||null;r.pdfName=old?.pdfName||null;let file=f.elements.pdf.files[0]||(!editing?pendingPDF?.file:null);if(file){if(file.size>12*1024*1024)return msg('PDF 檔案請勿超過 12 MB');r.pdfData=await readBase64(file);r.pdfName=file.name}if(r.number&&records.some(x=>x.id!==r.id&&x.number===r.number&&x.company===r.company&&x.type===r.type))return msg('已有相同保險公司、類別與保單號碼，請先確認');try{await save(r);hideForm();pendingPDF=null;refresh();msg('保單已儲存')}catch(e){msg('儲存失敗，可能是手機儲存空間不足')}};async function removePolicy(id){if(!confirm('確定刪除此筆保單及附加 PDF？'))return;await del(id);refresh();msg('已刪除')}function pdfBlob(data){
+function transaction(mode){return db.transaction('policies',mode).objectStore('policies')}async function refresh(){try{await ensureDatabase()}catch(e){msg('讀取失敗：'+e.message);return}transaction('readonly').getAll().onsuccess=e=>{records=e.target.result;render();if($('calendarPanel').open)renderRenewalCalendar();if(window.RenewalPush){RenewalPush.openLinkedPolicy();RenewalPush.sync()}if(window.GoogleRenewal)GoogleRenewal.sync()}}async function save(r){await ensureDatabase();return new Promise((resolve,reject)=>{let tx=db.transaction('policies','readwrite');tx.objectStore('policies').put(r);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('transaction aborted'))})}async function del(id){await ensureDatabase();return new Promise((resolve,reject)=>{let tx=db.transaction('policies','readwrite');tx.objectStore('policies').delete(id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('transaction aborted'))})}function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}const policyViewLabels={all:'全部保單',soon:'30天內到期',pending:'待承保確認'};
+let policyView='all';
+function isWithin30Days(policy,today){
+ const end=calendarDay(policy.end);
+ if(!end||['已續保','不續保'].includes(policy.status))return false;
+ const days=(end-today)/86400000;
+ return days>=0&&days<=30;
+}
+function openPolicyView(view){
+ policyView=view;
+ $('search').value='';
+ $('filter').value='';
+ document.querySelectorAll('[data-policy-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.policyView===view)));
+ render();
+ $('policyListTitle').focus({preventScroll:true});
+ $('policyList').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+}
+function render(){
+ const today=calendarDay(renewalToday());
+ const views={all:records,soon:records.filter(policy=>isWithin30Days(policy,today)),pending:records.filter(policy=>policy.status==='待承保確認')};
+ $('count').textContent=views.all.length;
+ $('pending').textContent=views.pending.length;
+ $('soon').textContent=views.soon.length;
+ let s=$('search').value.trim().toLowerCase(),f=$('filter').value;let arr=views[policyView].filter(x=>(!f||x.status===f)&&(!s||[x.customer,x.number,x.plate].some(y=>String(y||'').toLowerCase().includes(s)))).sort((a,b)=>(a.end||'9999').localeCompare(b.end||'9999'));$('policyViewStatus').textContent=policyViewLabels[policyView]+' · '+arr.length+' 筆';$('items').innerHTML=arr.length?arr.map(x=>{let days=(calendarDay(x.end)?.getTime()-today.getTime())/86400000;let t=x.status==='待承保確認'?'warn':x.status==='已續保'||x.status==='已承保'?'done':'';return `<div class="item"><div class="itemtop"><strong>${esc(x.customer)}</strong><span class="tag ${t}">${esc(x.status)}</span></div><p>${esc(x.company)} · ${esc(x.type)} ${x.plate?'· '+esc(x.plate):''}</p><p>保單：${esc(x.number||'尚未取得')}<br>到期：${esc(x.end||'未填')} ${Number.isFinite(days)?'（'+(days<0?'逾期 '+(-days):'剩餘 '+days)+' 天）':''}</p><div class="actions"><button class="secondary" data-id="${esc(x.id)}" onclick="edit(this.dataset.id)">查看／修改</button>${x.pdfData?`<button class="secondary" data-id="${esc(x.id)}" onclick="viewPDF(this.dataset.id)">開啟 PDF</button>`:''}<button class="secondary" data-id="${esc(x.id)}" onclick="removePolicy(this.dataset.id)">刪除</button></div></div>`}).join(''):'<p class="muted">目前沒有符合條件的保單。</p>'}function showForm(kind){if(kind!=='pdf')pendingPDF=null;editing=null;$('policyForm').reset();$('formtitle').textContent='新增保單';if(kind==='pdf')$('policyForm').elements.status.value='待承保確認';$('formpanel').classList.remove('hidden');$('formpanel').scrollIntoView({behavior:'smooth'})}function hideForm(){pendingPDF=null;$('formpanel').classList.add('hidden');editing=null}function edit(id){let r=records.find(x=>x.id===id);if(!r)return;showForm();editing=id;$('formtitle').textContent='修改保單';for(let k of ['customer','company','type','number','plate','start','end','premium','status','note']){const field=$('policyForm').elements[k];if(field.tagName==='SELECT'&&r[k]&&!Array.from(field.options).some(o=>o.value===r[k])){const option=document.createElement('option');option.value=r[k];option.textContent=r[k];field.add(option);}field.value=r[k]||'';}$('formpanel').scrollIntoView({behavior:'smooth'})}function readBase64(file){return new Promise((res,rej)=>{let f=new FileReader();f.onload=()=>res(f.result);f.onerror=rej;f.readAsDataURL(file)})}$('policyForm').onsubmit=async e=>{e.preventDefault();let f=e.target,old=records.find(x=>x.id===editing),r={id:editing||uid(),created:old?.created||new Date().toISOString()};for(let k of ['customer','company','type','number','plate','start','end','premium','status','note'])r[k]=f.elements[k].value.trim();r.pdfData=old?.pdfData||null;r.pdfName=old?.pdfName||null;let file=f.elements.pdf.files[0]||(!editing?pendingPDF?.file:null);if(file){if(file.size>12*1024*1024)return msg('PDF 檔案請勿超過 12 MB');r.pdfData=await readBase64(file);r.pdfName=file.name}if(r.number&&records.some(x=>x.id!==r.id&&x.number===r.number&&x.company===r.company&&x.type===r.type))return msg('已有相同保險公司、類別與保單號碼，請先確認');try{await save(r);hideForm();pendingPDF=null;refresh();msg('保單已儲存')}catch(e){msg('儲存失敗，可能是手機儲存空間不足')}};async function removePolicy(id){if(!confirm('確定刪除此筆保單及附加 PDF？'))return;await del(id);refresh();msg('已刪除')}function pdfBlob(data){
  if(typeof data!=='string')throw Error('附件內容不存在');
  const match=/^data:application\/pdf(?:;[^,]*)?;base64,([\s\S]+)$/i.exec(data);
  if(!match)throw Error('附件不是有效的 PDF 備份格式');
@@ -388,7 +468,6 @@ async function backup(){
  };
  request.onerror=()=>msg('無法讀取資料庫，備份未完成');
 }
-// V2.3 preliminary calendar export: no Google account access or automatic synchronization.
 function calendarDay(s){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(s||'')))return null;
  const [y,m,d]=s.split('-').map(Number);
@@ -403,25 +482,145 @@ function oneMonthBefore(s){
  prev.setUTCDate(Math.min(d,last));
  return prev.toISOString().slice(0,10).replace(/-/g,'');
 }
-function icsEscape(s){return String(s??'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;')}
-async function exportRenewalCalendar(){
- try{await ensureDatabase()}catch(e){msg('匯出失敗：'+e.message);return}
- if(!db){msg('資料庫尚未就緒');return}
- const request=db.transaction('policies','readonly').objectStore('policies').getAll();
- request.onerror=()=>msg('讀取保單失敗，未匯出');
- request.onsuccess=()=>{
-  const active=request.result.filter(r=>!['已續保','不續保'].includes(r.status)&&oneMonthBefore(r.end));
-  if(!active.length){$('calendarExportStatus').textContent='目前沒有可匯出的未完成續保保單。';return}
-  const stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
-  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Insurance Renewal//V2.3 Calendar Export//ZH','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
-  for(const r of active){
-   const day=oneMonthBefore(r.end),stable=String(r.id||[r.customer,r.number,r.end].join('-')).replace(/[^a-zA-Z0-9_-]/g,'_');
-   lines.push('BEGIN:VEVENT','UID:insurance-renewal-'+stable+'@local.export','DTSTAMP:'+stamp,'DTSTART;VALUE=DATE:'+day,'SUMMARY:'+icsEscape('續保提醒：'+(r.customer||'未命名客戶')),'DESCRIPTION:'+icsEscape('保險公司：'+(r.company||'')+'\n保單號碼：'+(r.number||'')+'\n到期日：'+r.end+'\n請開啟產險續保系統確認狀態。'),'END:VEVENT');
+function icsEscape(value){
+ return String(value??'').replace(/\\/g,'\\\\').replace(/\r\n|\r|\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
+}
+const taipeiDate = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'});
+function renewalToday(now=new Date()){
+ const parts=Object.fromEntries(taipeiDate.formatToParts(now).map(({type,value})=>[type,value]));
+ return [parts.year,parts.month,parts.day].join('-');
+}
+function renewalEvents(policies){
+ const events=[];
+ for(const policy of policies){
+  if(['已續保','不續保'].includes(policy.status))continue;
+  const day=oneMonthBefore(policy.end);
+  if(!day)continue;
+  const plate=String(policy.plate||'').normalize('NFKC').trim()||'未填車牌';
+  const type=String(policy.type||'').normalize('NFKC').trim()||'未填險種';
+  events.push({policy,date:day.replace(/^(\d{4})(\d{2})/,'$1-$2-'),title:['續保提醒',plate,type].join('｜')});
+ }
+ return events.sort((a,b)=>a.date.localeCompare(b.date)||a.policy.end.localeCompare(b.policy.end)||a.title.localeCompare(b.title,'zh-Hant'));
+}
+let renewalSelectedDay=renewalToday();
+function moveRenewalMonth(offset){
+ const selected=calendarDay(renewalSelectedDay);
+ const first=new Date(Date.UTC(selected.getUTCFullYear(),selected.getUTCMonth()+offset,1)).toISOString().slice(0,10);
+ const month=first.slice(0,7),today=renewalToday();
+ renewalSelectedDay=today.startsWith(month)?today:renewalEvents(records).find(event=>event.date.startsWith(month))?.date||first;
+ renderRenewalCalendar();
+}
+function resetRenewalMonth(){
+ renewalSelectedDay=renewalToday();
+ renderRenewalCalendar();
+}
+function renderRenewalCalendar(){
+ const selected=calendarDay(renewalSelectedDay);
+ const year=selected.getUTCFullYear(),month=selected.getUTCMonth(),today=renewalToday();
+ const monthKey=renewalSelectedDay.slice(0,7);
+ const start=new Date(Date.UTC(year,month,1)).getUTCDay();
+ const days=new Date(Date.UTC(year,month+1,0)).getUTCDate();
+ const byDay=new Map();
+ for(const event of renewalEvents(records)){
+  if(!event.date.startsWith(monthKey))continue;
+  if(!byDay.has(event.date))byDay.set(event.date,[]);
+  byDay.get(event.date).push(event);
+ }
+ $('renewalMonth').textContent=year+' 年 '+(month+1)+' 月';
+ const grid=document.createDocumentFragment();
+ for(let cell=0;cell<start;cell++)grid.append(document.createElement('span'));
+ for(let day=1;day<=days;day++){
+  const date=monthKey+'-'+String(day).padStart(2,'0');
+  const count=byDay.get(date)?.length||0;
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='calendar-day';
+  button.textContent=day;
+  button.setAttribute('aria-label',date+'，'+count+' 筆提醒');
+  if(date===today)button.setAttribute('aria-current','date');
+  button.setAttribute('aria-pressed',String(date===renewalSelectedDay));
+  if(count){
+   const badge=document.createElement('small');
+   badge.textContent=count+' 筆';
+   button.append(badge);
   }
-  lines.push('END:VCALENDAR');
-  downloadBlob(new Blob([lines.join('\r\n')+'\r\n'],{type:'text/calendar;charset=utf-8'}),'產險續保提醒_'+new Date().toISOString().slice(0,10)+'.ics');
-  $('calendarExportStatus').textContent='已產生 '+active.length+' 筆提醒檔；請自行匯入 Google 行事曆。這不是自動同步。';
- };
+  button.onclick=()=>{
+   gridContainer.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed','false');
+   renewalSelectedDay=date;
+   button.setAttribute('aria-pressed','true');
+   showRenewalDay(byDay.get(date)||[]);
+  };
+  grid.append(button);
+ }
+ const gridContainer=$('renewalDays');
+ gridContainer.replaceChildren(grid);
+ showRenewalDay(byDay.get(renewalSelectedDay)||[]);
+}
+function showRenewalDay(events){
+ $('renewalDayHeading').textContent=renewalSelectedDay.replaceAll('-','/')+' · '+events.length+' 筆提醒';
+ const entries=$('renewalEntries');
+ entries.replaceChildren();
+ if(!events.length){
+  const empty=document.createElement('p');
+  empty.className='muted';
+  empty.textContent='這一天沒有續保提醒。';
+  entries.append(empty);
+ }
+ for(const event of events){
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='secondary calendar-entry';
+  button.textContent=event.title;
+  const expiry=document.createElement('small');
+  expiry.textContent='保單到期 '+event.policy.end.replaceAll('-','/');
+  button.append(expiry);
+  button.onclick=()=>edit(event.policy.id);
+  entries.append(button);
+ }
+}
+$('calendarPanel').addEventListener('toggle',()=>{
+ if($('calendarPanel').open)renderRenewalCalendar();
+});
+function foldCalendarLine(line){
+ const encoder=new TextEncoder();
+ let size=0,result='';
+ for(const character of line){
+  const width=encoder.encode(character).length;
+  if(size+width>75){result+='\r\n ';size=1}
+  result+=character;
+  size+=width;
+ }
+ return result;
+}
+function renewalCalendarFile(events,now=new Date()){
+ const stamp=now.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+ const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Insurance Renewal//Renewal Calendar//ZH','CALSCALE:GREGORIAN'];
+ for(const {policy,date,title} of events){
+  const day=date.replaceAll('-','');
+  // 01:00 UTC is 09:00 in Taiwan year-round.
+  lines.push('BEGIN:VEVENT','UID:insurance-renewal-'+encodeURIComponent(policy.id)+'@local.export','DTSTAMP:'+stamp,
+   'DTSTART:'+day+'T010000Z','DTEND:'+day+'T011500Z','SUMMARY:'+icsEscape(title),
+   'DESCRIPTION:'+icsEscape('保單到期日 '+policy.end),'BEGIN:VALARM','TRIGGER:PT0S','ACTION:DISPLAY',
+   'DESCRIPTION:'+icsEscape(title),'END:VALARM','END:VEVENT');
+ }
+ lines.push('END:VCALENDAR');
+ return lines.map(foldCalendarLine).join('\r\n')+'\r\n';
+}
+async function exportRenewalCalendar(){
+ const status=$('calendarExportStatus');
+ try{
+  await ensureDatabase();
+  const request=transaction('readonly').getAll();
+  request.onerror=()=>{status.textContent='讀取保單失敗，請再試一次。'};
+  request.onsuccess=()=>{
+   const now=new Date(),today=renewalToday(now);
+   const events=renewalEvents(request.result).filter(event=>event.date>=today);
+   if(!events.length){status.textContent='今天起沒有可匯出的續保提醒。';return}
+   const file=new Blob([renewalCalendarFile(events,now)],{type:'text/calendar;charset=utf-8'});
+   downloadBlob(file,'產險續保提醒_'+today+'.ics');
+   status.textContent='已產生 '+events.length+' 筆提醒。請將檔案匯入 iCloud 行事曆，並確認事件提示。';
+  };
+ }catch(e){status.textContent='匯出失敗：'+e.message}
 }
 
 init();
@@ -430,4 +629,4 @@ init();
  const origin=location.origin+location.pathname;
  $('originInfo').textContent=ok?'目前網址：'+origin+'。請確認每次都使用同一個主畫面圖示。':'目前不是固定 HTTPS 網址，資料儲存不可靠；請先完成網站部署。';
  if(ok&&'serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
-})();</script><script src="./js/excel-import-v23.js"></script><script src="./js/google-calendar-v23.js"></script><script src="https://accounts.google.com/gsi/client" async defer></script><script>window.addEventListener("load",()=>GoogleRenewal.init());</script><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script></body></html>
+})();</script><script src="./js/excel-import-v23.js"></script><script src="./js/google-calendar-v23.js"></script><script src="./js/renewal-push.js"></script><script src="https://accounts.google.com/gsi/client" async defer></script><script>window.addEventListener("load",()=>GoogleRenewal.init());</script><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script></body></html>

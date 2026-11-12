@@ -1,7 +1,7 @@
 {
-  "name": "產險續保 V2.3",
-  "short_name": "續保V2.3",
-  "description": "產險續保 V2.3 正式版；Google 行事曆提醒與 iCloud Drive 手動 JSON 備份",
+  "name": "產險續保小系統",
+  "short_name": "產險續保",
+  "description": "產險保單管理與續保提醒",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
