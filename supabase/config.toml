@@ -1,0 +1,4 @@
+project_id = "insurance-renewal-push"
+
+[functions.renewal-push]
+verify_jwt = false
