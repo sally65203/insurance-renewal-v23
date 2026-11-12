@@ -1,5 +1,5 @@
 const PREFIX='insurance-preview-v23-'+encodeURIComponent(self.registration.scope)+'-';
-const CACHE=PREFIX+'shell-8';
+const CACHE=PREFIX+'release-24-1';
 const ASSETS=['./','./index.html','./js/google-calendar-v23.js','./js/excel-import-v23.js','./js/renewal-push.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
