@@ -66,3 +66,41 @@ $$;
 
 revoke execute on function public.sync_renewal_push(uuid,jsonb,jsonb), public.claim_renewal_push() from public, anon, authenticated;
 grant execute on function public.sync_renewal_push(uuid,jsonb,jsonb), public.claim_renewal_push() to service_role;
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+revoke usage on schema net from public, anon, authenticated;
+create schema renewal_push_private;
+revoke all on schema renewal_push_private from public, anon, authenticated;
+grant usage on schema renewal_push_private to service_role;
+
+select vault.create_secret(replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''), 'renewal_push_test_key');
+select vault.create_secret(replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''), 'renewal_push_cron_key');
+
+create function renewal_push_private.config(keys jsonb default null)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  vapid jsonb;
+  settings jsonb;
+begin
+  if keys is not null then
+    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('renewal_push_vapid'));
+    select decrypted_secret::jsonb into vapid from vault.decrypted_secrets where name = 'renewal_push_vapid';
+    if vapid is null then
+      perform vault.create_secret(keys::text, 'renewal_push_vapid');
+    end if;
+  end if;
+
+  select jsonb_object_agg(name, decrypted_secret) into settings
+  from vault.decrypted_secrets
+  where name in ('renewal_push_test_key','renewal_push_cron_key','renewal_push_vapid');
+  return settings;
+end;
+$$;
+
+create function public.renewal_push_config(keys jsonb default null)
+returns jsonb language sql security invoker set search_path = '' as $$
+  select renewal_push_private.config(keys);
+$$;
+
+revoke execute on function renewal_push_private.config(jsonb), public.renewal_push_config(jsonb) from public, anon, authenticated;
+grant execute on function renewal_push_private.config(jsonb), public.renewal_push_config(jsonb) to service_role;

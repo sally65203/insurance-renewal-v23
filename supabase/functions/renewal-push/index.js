@@ -4,14 +4,17 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 
 const env = name => Deno.env.get(name) ?? '';
 const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'));
-const allowedOrigin = env('PUSH_APP_ORIGIN');
-const publicKey = env('PUSH_VAPID_PUBLIC_KEY');
-const privateKey = env('PUSH_VAPID_PRIVATE_KEY');
-const subject = env('PUSH_VAPID_SUBJECT');
+const allowedOrigin = 'https://insurance-renewal-push-test.sally24758.chatgpt.site';
+const subject = allowedOrigin;
+
+async function config(keys = null) {
+ const {data, error} = await admin.rpc('renewal_push_config', {keys});
+ if (error || !data) throw new Error('Push configuration unavailable');
+ return data;
+}
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function authorized(value, name) {
- const expected = env(name);
+function authorized(value, expected = '') {
  const digest = text => createHash('sha256').update(text).digest();
  return expected.length >= 32 && timingSafeEqual(digest(value ?? ''), digest(expected));
 }
@@ -39,7 +42,7 @@ function reminders(items, device) {
  });
 }
 
-async function send(sub, payload) {
+async function send(sub, payload, {publicKey, privateKey}) {
  const options = { TTL: 1800, timeout: 8000, vapidDetails: {subject, publicKey, privateKey} };
  // Encryption and VAPID signing use web-push. Fetch with redirects disabled.
  const request = webpush.generateRequestDetails(sub, JSON.stringify(payload), options);
@@ -50,7 +53,7 @@ async function send(sub, payload) {
  return response.status;
 }
 
-async function dispatch() {
+async function dispatch(keys) {
  const { data, error } = await admin.rpc('claim_renewal_push');
  if (error) throw error;
  const result = await Promise.allSettled(data.map(async job => {
@@ -60,7 +63,7 @@ async function dispatch() {
    .eq('device_id', job.device_id).eq('policy_id', job.policy_id).eq('claim', job.claim).maybeSingle();
   if (active.error) throw active.error;
   if (!active.data) return false;
-  const status = await send(job.subscription, job.payload);
+  const status = await send(job.subscription, job.payload, keys);
   if ([404, 410].includes(status)) {
    const removed = await admin.from('renewal_push_devices').delete().eq('id', job.device_id)
     .filter('subscription->>endpoint', 'eq', job.subscription.endpoint);
@@ -85,11 +88,17 @@ Deno.serve(async request => {
  const respond = (body, status = 200) => Response.json(body, {status, headers});
  if (request.method === 'OPTIONS') return new Response(null, {status: origin === allowedOrigin ? 204 : 403, headers});
  if (request.method !== 'POST') return respond({error:'Method not allowed'}, 405);
- if (!publicKey || !privateKey || !subject) return respond({error:'Push not configured'}, 503);
+ const auth = request.headers.get('X-Renewal-Key');
+ if (!auth || auth.length > 128 || (origin && origin !== allowedOrigin)) return respond({error:'Unauthorized'}, 401);
  try {
-  if (!origin && authorized(request.headers.get('X-Renewal-Key'), 'PUSH_CRON_KEY')) return respond(await dispatch());
-  if (!origin || origin !== allowedOrigin || !authorized(request.headers.get('X-Renewal-Key'), 'PUSH_TEST_KEY'))
+  let settings = await config();
+  const cron = !origin && authorized(auth, settings.renewal_push_cron_key);
+  if (!cron && (origin !== allowedOrigin || !authorized(auth, settings.renewal_push_test_key)))
    return respond({error:'Unauthorized'}, 401);
+
+  if (!settings.renewal_push_vapid) settings = await config(webpush.generateVAPIDKeys());
+  const keys = JSON.parse(settings.renewal_push_vapid);
+  if (cron) return respond(await dispatch(keys));
 
   const body = await request.text();
   if (body.length > 400000) return respond({error:'Request too large'}, 413);
@@ -104,7 +113,7 @@ Deno.serve(async request => {
   }
   if (input.action === 'test') {
    const status = await send(sub, {id: 'push-test-' + input.device, title:'續保提醒｜TEST-123｜強制險',
-    body:'這是一則測試通知。點一下可回到續保 App。'});
+    body:'這是一則測試通知。點一下可回到續保 App。'}, keys);
    return respond({accepted:status >= 200 && status < 300}, status >= 200 && status < 300 ? 200 : 502);
   }
   if (input.action !== 'sync' && input.action !== 'disable') return respond({error:'Invalid action'}, 400);
