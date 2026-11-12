@@ -6,6 +6,7 @@ const env = name => Deno.env.get(name) ?? '';
 const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'));
 const allowedOrigin = 'https://insurance-renewal-push-test.sally24758.chatgpt.site';
 const subject = allowedOrigin;
+const allowedOrigins = new Set([allowedOrigin, "https://insurance-renewal-rc.sally24758.chatgpt.site"]);
 
 async function config(keys = null) {
  const {data, error} = await admin.rpc('renewal_push_config', {keys});
@@ -81,19 +82,20 @@ async function dispatch(keys) {
 
 Deno.serve(async request => {
  const origin = request.headers.get('Origin');
- const headers = origin && origin === allowedOrigin ? {
+ const trustedOrigin = allowedOrigins.has(origin);
+ const headers = trustedOrigin ? {
   'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, X-Renewal-Key', 'Vary': 'Origin'
  } : {};
  const respond = (body, status = 200) => Response.json(body, {status, headers});
- if (request.method === 'OPTIONS') return new Response(null, {status: origin === allowedOrigin ? 204 : 403, headers});
+ if (request.method === 'OPTIONS') return new Response(null, {status: trustedOrigin ? 204 : 403, headers});
  if (request.method !== 'POST') return respond({error:'Method not allowed'}, 405);
  const auth = request.headers.get('X-Renewal-Key');
- if (!auth || auth.length > 128 || (origin && origin !== allowedOrigin)) return respond({error:'Unauthorized'}, 401);
+ if (!auth || auth.length > 128 || (origin && !trustedOrigin)) return respond({error:'Unauthorized'}, 401);
  try {
   let settings = await config();
   const cron = !origin && authorized(auth, settings.renewal_push_cron_key);
-  if (!cron && (origin !== allowedOrigin || !authorized(auth, settings.renewal_push_test_key)))
+  if (!cron && (!trustedOrigin || !authorized(auth, settings.renewal_push_test_key)))
    return respond({error:'Unauthorized'}, 401);
 
   if (!settings.renewal_push_vapid) settings = await config(webpush.generateVAPIDKeys());
