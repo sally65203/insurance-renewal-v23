@@ -24,7 +24,7 @@ button.stat:focus-visible{outline:2px solid #1e5d86;outline-offset:2px}
 </div><div class="toolbar"><button onclick="showForm()">＋ 新增保單</button><button class="secondary" onclick="document.getElementById('imports').scrollIntoView({behavior:'smooth'})">匯入資料</button></div>
 <details class="panel renewal-calendar" id="pushSettings">
  <summary>iPhone 續保推播</summary>
- <p class="muted">先允許通知並傳送一則測試。收到後，可啟用正式保單提醒，於到期前一個月上午 9:00（台灣時間）發送。</p>
+ <p class="muted">先允許通知並傳送一則測試。收到後，可啟用正式保單提醒，於到期前一個月及到期前 7 天上午 9:00（台灣時間）發送。已標為「已續保」或「不續保」的保單會取消後續提醒。</p>
  <p class="muted">啟用後，Supabase 只接收排程日期、車牌、險種、到期日及本機紀錄識別碼。姓名、保單號碼、保費和 PDF 留在裝置上。</p>
  <label for="renewalPushKey">正式通知開通碼</label><input type="password" id="renewalPushKey" autocomplete="off" autocapitalize="none" spellcheck="false">
  <input type="hidden" id="renewalPushPublicKey" value="BD3EAyYyPX7ZbNitgZheydkVO3Gjcxz4XBg9XkKFDlMOwv15rpzNbMX_jUnE0opZ9fG78IncBJTFaa6E4JFmNcA">
