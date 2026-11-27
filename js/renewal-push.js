@@ -43,7 +43,7 @@
   });
  }
  function buildReminders(policies,today){
-  return renewalEvents(policies).filter(event=>event.date>=today&&!String(event.policy.id).startsWith('push-test-')).map(event=>({
+  return renewalEvents(policies).filter(event=>event.policy.end>=today&&!String(event.policy.id).startsWith('push-test-')).map(event=>({
    id:event.policy.id,date:event.date,title:event.title.slice(0,140),expiry:event.policy.end
   }));
  }
@@ -51,7 +51,7 @@
   const sub=await subscription();
   const reminders=buildReminders(await currentPolicies(),renewalToday());
   const result=await request(config,'sync',sub,reminders);
-  status('正式保單推播已同步 · '+result.scheduled+' 筆提醒');
+  status('正式保單推播已同步 · '+result.scheduled+' 筆保單（到期前一個月及 7 天提醒）');
  }
  const lock=work=>navigator.locks?navigator.locks.request(storageKey,work):work();
  function sync(){
